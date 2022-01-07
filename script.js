@@ -1,10 +1,18 @@
 const { cos, sin, round, floor, ceil, min, max, abs, sqrt, atan, atan2 } = Math;
-function xyArrayHas(arr,x,y){
-  for(var i=0; i<arr.length; i++){
-    if(arr[i].x === x && arr[i].y === y){
+function xyArrayHas(arr,arr2,x,y){
+  for(var i=0; i<arr.length; i+=3){
+    if(arr[i] === x && arr[i+1] === y){
       return true
     }
   }
+  for(var i=0; i<arr2.length; i+=3){
+    if(arr2[i] === x && arr2[i+1] === y){
+      return true
+    }
+  }
+}
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 var c = document.querySelector("#c")
@@ -48,7 +56,7 @@ var blockData = [
         return
       }
       var {left,right,up,down} = tags
-      ctx.fillStyle = tint[tags.powerLevel]
+      ctx.fillStyle = tint[tags.power]
       x *= size
       y *= size
       ctx.fillRect(x+s2-6,y+s2-6,12,12)
@@ -69,7 +77,7 @@ var blockData = [
       var tags = world.getTags(x,y)
       if(!tags){
         tags = {
-          powerLevel:0,
+          power:0,
           right:0,
           left:0,
           up:0,
@@ -95,7 +103,16 @@ var blockData = [
       ctx.fillRect(x*size, y*size, size,size)
     },
     onplace: function(x,y){
+      world.setTags(x,y,{power:15})
       world.spreadPower(x,y, 15)
+    }
+  },
+  {
+    name:"stone",
+    Name:"Stone",
+    draw: function(x,y){
+      ctx.fillStyle = "#aaa"
+      ctx.fillRect(x*size, y*size, size,size)
     }
   }
 ]
@@ -136,8 +153,8 @@ class World{
 
     this.update = [] //blocks to update
 
-    this.width = 32
-    this.height = 16
+    this.width = 64
+    this.height = 64
   }
   getIndex(x,y){
     if(x < 0 || y < 0 || x >= this.width || y >= this.height) return -1
@@ -162,7 +179,7 @@ class World{
     this.updateBlock(x,y-1, x,y)
 
     if(blockData[id].onplace){
-      blockData[id].onplace()
+      blockData[id].onplace(x,y)
     }
   }
   getTags(x,y){
@@ -179,30 +196,59 @@ class World{
     if(blockData[b].onupdate) blockData[b].onupdate(x,y, sourceX,sourceY)
   }
 
-  spreadPower(x,y, level){
-    //how???
+  getRedstoneConnectedTo(x,y, level){
+    var spreaded = []
+    var spreadAt = []
+    spreadAt.push(x,y,0)
+    while(spreadAt.length){
+      var x = spreadAt[0]
+      var y = spreadAt[1]
+      var i = spreadAt[2]
+      if(i < level) {
+        if(!xyArrayHas(spreaded,spreadAt,x+1,y) && world.getBlock(x+1,y) === blockIds.redstoneWire) spreadAt.push(x+1,y,i+1)
+        if(!xyArrayHas(spreaded,spreadAt,x-1,y) && world.getBlock(x-1,y) === blockIds.redstoneWire) spreadAt.push(x-1,y,i+1)
+        if(!xyArrayHas(spreaded,spreadAt,x,y+1) && world.getBlock(x,y+1) === blockIds.redstoneWire) spreadAt.push(x,y+1,i+1)
+        if(!xyArrayHas(spreaded,spreadAt,x,y-1) && world.getBlock(x,y-1) === blockIds.redstoneWire) spreadAt.push(x,y-1,i+1)
+        spreaded.push(x,y,i)
+      }
+      spreadAt.splice(0,3)
+    }
+
+    //testing
+    /*console.log(spreaded)
+    var s=spreaded
+    for(var i=0; i<s.length; i+=3){
+      world.setBlock(s[i],s[i+1],blockIds.stone)
+    }//*/
+
+    return spreaded
   }
-  /*updatePower(x,y){
-    var right = world.getTags(x+1,y)
-    var left = world.getTags(x-1,y)
-    var down = world.getTags(x,y+1)
-    var up = world.getTags(x,y-1)
-    right = (right && right.powerLevel) || 0
-    left = (left && left.powerLevel) || 0
-    down = (down && down.powerLevel) || 0
-    up = (up && up.powerLevel) || 0
+  spreadPower(x,y, level){
+    var spread = this.getRedstoneConnectedTo(x,y,level)
+    for(var i=0; i<spread.length; i+=3){
+      var x = spread[i]
+      var y = spread[i+1]
+      var l = this.getRedstoneWirePower(x,y)
+      //this.setPower(x,y, l)
+    }
+  }
+  getRedstoneWirePower(x,y){
+    var right = this.getPower(x+1,y)
+    var left = this.getPower(x-1,y)
+    var down = this.getPower(x,y+1)
+    var up = this.getPower(x,y-1)
     var level = max(right,left,down,up) - 1
     return level < 0 ? 0 : level
   }
   getPower(x,y){
     var tags = this.getTags(x,y)
-    return (tags && tags.powerLevel) || 0
+    return (tags && tags.power) || 0
   }
   setPower(x,y, level){
     var tags = this.getTags(x,y)
-    tags.powerLevel = level
+    tags.power = level
   }
-  trySpread(x, y, level, spread) {
+  /*trySpread(x, y, level, spread) {
     if(y < 0) return
     
     var f
@@ -237,35 +283,37 @@ var s2 = size / 2
 
 setSize(world.width * size, world.height * size)
 
-var mouseX = 0, mouseY = 0, mouseDown = false
+var mouseX = 0, mouseY = 0, blockX = 0, blockY = 0,mouseDown = false
 
-function getMousePos(evt) {
+function getMousePos(e) {
   var rect = c.getBoundingClientRect();
-  return {
-    x: evt.clientX - rect.left,
-    y: evt.clientY - rect.top
-  };
+  mouseX = e.clientX - rect.left
+  mouseY = e.clientY - rect.top
+  var x = floor(mouseX / size)
+  var y = floor(mouseY / size)
+  e.blockX = x
+  e.blockY = y
 }
 
-function newWorldBlock(e){
-  var pos = getMousePos(e)
-  mouseX = pos.x
-  mouseY = pos.y
-  var x = floor(pos.x / size)
-  var y = floor(pos.y / size)
-  var block = selected
-  world.setBlock(x,y, block)
+function newWorldBlock(x,y){
+  world.setBlock(x,y, selected)
 }
 c.onmousedown = function(e){
   mouseDown = true
-  newWorldBlock(e)
+  getMousePos(e)
+  blockX = e.blockX
+  blockY = e.blockY
+  newWorldBlock(blockX, blockY)
 }
 c.onmouseup = function(e){
   mouseDown = false
 }
 c.onmousemove = function(e){
-  if(mouseDown){
-    newWorldBlock(e)
+  getMousePos(e)
+  if(mouseDown && (e.blockX !== blockX || e.blockY !== blockY)){
+    blockX = e.blockX
+    blockY = e.blockY
+    newWorldBlock(e.blockX, e.blockY)
   }
 }
 
