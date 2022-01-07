@@ -1,0 +1,64 @@
+<!--
+  I don't even know how the code for redstone is supposed to work.
+  I guess I will have to come up with code
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>redstone simulation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet">
+    <style>
+      *{
+        box-sizing:border-box;
+      }
+      body,html{
+        margin:0;
+        padding:0;
+        height:100%;
+      }
+      body{
+        font-family:Montserrat, sans-serif;
+      }
+      #c{
+        background:#eee;
+        display:block;
+      }
+      #container{
+        display:flex;
+        flex-direction:row;
+      }
+      #controls{
+        padding:8px;
+        position:sticky;
+        top:0px;
+        left:0px;
+        background:white;
+        height:100vh;
+      }
+      #blocks > div{
+        border:1px solid gray;
+        padding:8px;
+        display:inline-block;
+        margin:4px;
+        cursor:pointer;
+      }
+      #blocks > div:hover, #blocks > div.selected{
+        border:1px solid black;
+        background:#aaf;
+        color:yellow;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="controls">
+        <h1>Controls</h1>
+        <div id="blocks"></div>
+      </div>
+      <canvas id="c"></canvas>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
