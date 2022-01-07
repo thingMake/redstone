@@ -103,8 +103,11 @@ var blockData = [
       ctx.fillRect(x*size, y*size, size,size)
     },
     onplace: function(x,y){
-      world.setTags(x,y,{power:15})
+      world.setTags(x,y,{power:16})
       world.spreadPower(x,y, 15)
+    },
+    ondelete: function(x,y){
+      world.unspreadPower(x,y, 15)
     }
   },
   {
@@ -168,6 +171,7 @@ class World{
   setBlock(x,y, id){
     var i = this.getIndex(x,y)
     if(i < 0) return
+    var prev = this.blocks[i]
     this.blocks[i] = id
 
     this.tags[i] = null
@@ -180,6 +184,9 @@ class World{
 
     if(blockData[id].onplace){
       blockData[id].onplace(x,y)
+    }
+    if(prev && blockData[prev].ondelete){
+      blockData[prev].ondelete(x,y)
     }
   }
   getTags(x,y){
@@ -226,10 +233,23 @@ class World{
   spreadPower(x,y, level){
     var spread = this.getRedstoneConnectedTo(x,y,level)
     for(var i=0; i<spread.length; i+=3){
-      var x = spread[i]
-      var y = spread[i+1]
-      var l = this.getRedstoneWirePower(x,y)
-      //this.setPower(x,y, l)
+      var bx = spread[i]
+      var by = spread[i+1]
+      if(bx === x && by === y) continue
+      var l = this.getRedstoneWirePower(bx,by)
+      this.setPower(bx,by, l)
+    }
+  }
+  unspreadPower(x,y, level){
+    var spread = this.getRedstoneConnectedTo(x,y,level)
+    for(var n=0; n<level; n++){
+      for(var i=0; i<spread.length; i+=3){
+        var bx = spread[i]
+        var by = spread[i+1]
+        if(bx === x && by === y) continue
+        var l = this.getRedstoneWirePower(bx,by)
+        this.setPower(bx,by, l)
+      }
     }
   }
   getRedstoneWirePower(x,y){
