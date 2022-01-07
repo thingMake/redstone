@@ -93,6 +93,15 @@ var blockData = [
       tags.left = connectable(left)
       tags.up = connectable(up)
       tags.down = connectable(down)
+    },
+    onplace:function(x,y){
+      var tags = world.getTags(x,y)
+      tags.power = world.getRedstoneWirePower(x,y)
+      if(tags.power) world.spreadPower(x,y,tags.power)
+    },
+    ondelete:function(x,y, prevTags){
+      var tags = prevTags
+      if(tags.power) world.unspreadPower(x,y,tags.power)
     }
   },
   {
@@ -172,6 +181,7 @@ class World{
     var i = this.getIndex(x,y)
     if(i < 0) return
     var prev = this.blocks[i]
+    var prevTags = this.tags[i]
     this.blocks[i] = id
 
     this.tags[i] = null
@@ -186,7 +196,7 @@ class World{
       blockData[id].onplace(x,y)
     }
     if(prev && blockData[prev].ondelete){
-      blockData[prev].ondelete(x,y)
+      blockData[prev].ondelete(x,y, prevTags)
     }
   }
   getTags(x,y){
