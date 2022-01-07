@@ -93,11 +93,13 @@ var blockData = [
       tags.left = connectable(left)
       tags.up = connectable(up)
       tags.down = connectable(down)
+      world.setTags(x,y,tags)
     },
     onplace:function(x,y){
       var tags = world.getTags(x,y)
       tags.power = world.getRedstoneWirePower(x,y)
       if(tags.power) world.spreadPower(x,y,tags.power)
+      world.setTags(x,y,tags)
     },
     ondelete:function(x,y, prevTags){
       var tags = prevTags
@@ -126,6 +128,28 @@ var blockData = [
       ctx.fillStyle = "#aaa"
       ctx.fillRect(x*size, y*size, size,size)
     }
+  },
+  {
+    name:"redstoneLamp",
+    Name:"Redstone Lamp",
+    draw: function(x,y){
+      var tags = world.getTags(x,y)
+      ctx.fillStyle = "black"
+      ctx.fillRect(x*size,y*size,size,size)//outline
+      ctx.fillStyle = tags.on ? "#fa0" : "#a60"
+      ctx.fillRect(x*size+2,y*size+2,size-4,size-4)
+    },
+    onupdate: function(x,y){
+      var tags = world.getTags(x,y)
+      if(!tags){
+        tags = {on:false}
+        world.setTags(x,y,tags)
+      }
+      var power = world.getRedstonePower(x,y)
+      tags.on = power
+      world.setTags(x,y,tags)
+    },
+    detectTagChange: true
   }
 ]
 var blockIds = {}
@@ -135,7 +159,7 @@ blockData.forEach((block, i) => {
   block.Name = block.Name || block.name
 })
 
-var connectables = [blockIds.redstoneWire, blockIds.redstoneBlock]
+var connectables = [blockIds.redstoneWire, blockIds.redstoneBlock, blockIds.redstoneLamp]
 var connectable = id => connectables.includes(id)
 
 var selected = 0
@@ -192,11 +216,11 @@ class World{
     this.updateBlock(x,y+1, x,y)
     this.updateBlock(x,y-1, x,y)
 
-    if(blockData[id].onplace){
-      blockData[id].onplace(x,y)
-    }
     if(prev && blockData[prev].ondelete){
       blockData[prev].ondelete(x,y, prevTags)
+    }
+    if(blockData[id].onplace){
+      blockData[id].onplace(x,y)
     }
   }
   getTags(x,y){
@@ -206,6 +230,11 @@ class World{
   }
   setTags(x,y, tags){
     this.tags[this.getIndex(x,y)] = tags
+
+    this.tagChangeUpdate(x+1,y, x,y)
+    this.tagChangeUpdate(x-1,y, x,y)
+    this.tagChangeUpdate(x,y+1, x,y)
+    this.tagChangeUpdate(x,y-1, x,y)
   }
   updateBlock(x,y, sourceX,sourceY){ //sourceX and sourceY is the source of the update
     var b = this.getBlock(x,y)
@@ -270,6 +299,14 @@ class World{
     var level = max(right,left,down,up) - 1
     return level < 0 ? 0 : level
   }
+  getRedstonePower(x,y){
+    var right = this.getPower(x+1,y)
+    var left = this.getPower(x-1,y)
+    var down = this.getPower(x,y+1)
+    var up = this.getPower(x,y-1)
+    var level = max(right,left,down,up)
+    return level
+  }
   getPower(x,y){
     var tags = this.getTags(x,y)
     return (tags && tags.power) || 0
@@ -277,6 +314,13 @@ class World{
   setPower(x,y, level){
     var tags = this.getTags(x,y)
     tags.power = level
+    this.setTags(x,y,tags)
+  }
+  tagChangeUpdate(x,y, sourceX,sourceY){
+    var block = this.getBlock(x,y)
+    if(blockData[block].detectTagChange){
+      blockData[block].onupdate(x,y, sourceX,sourceY)
+    }
   }
   /*trySpread(x, y, level, spread) {
     if(y < 0) return
