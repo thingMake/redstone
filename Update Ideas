@@ -1,0 +1,73 @@
+1.1.0 will be when working mobs are added
+
+Update idea for Alpha 1.2.o
+
+Name:The redstone update
+New blocks:{
+- Redstone dust[
+Features:
+- Looks like minecraft dust
+- Carrys a redstone signal up to 15 blocks
+- Emits redstone particles periodicaly when powered
+]
+
+- Wood Button[
+Features:
+- Emits short redstone pulse
+- Makes click sound
+- Animation when clicked
+- 4 made with one plank
+]
+
+Lever[
+Features:
+- Emits a redstone current untill turned off
+- Animation when clicked
+- Sound
+- Redstone particles periodicaly while activated
+- 1 made with a stick and a cobblestone.
+- can be placed on bottom, sides, and top of blocks
+]
+
+Piston[
+Features:
+- Sound
+- Can push blocks, but not pull
+- Reacts to redstone dust or direct redstone signal
+- Open and closed texture
+]
+Pressure plate[
+Features:
+- Like button, but you step on it
+- Clicks when stepped on
+- Must be places on the top of a non air or liquid block
+]
+
+}
+
+
+Bug fixes:{
+Title screen glitches out after playing.
+}
+
+Features:[
+- Show arm in lower corner of screen in first person
+- 
+]
+
+
+
+Ideas for Alpha 1.3.0
+
+Name: The player update
+New blocks:{
+
+}
+Bug fixes:{
+- Fire and ice hud shows up allways
+- In survival, mining takes a second to start <-- Could that be removed? It is kind of annoying.
+-   Fix arm animation
+}
+Features:{
+- Adds Arm in 1st person view
+}

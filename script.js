@@ -1,3 +1,4 @@
+//math functions and stuff
 const { cos, sin, round, floor, ceil, min, max, abs, sqrt, atan, atan2 } = Math;
 function xyArrayHas(arr,arr2,x,y){
   for(var i=0; i<arr.length; i+=3){
@@ -14,7 +15,32 @@ function xyArrayHas(arr,arr2,x,y){
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
+function lerp(t, a, b) {
+  return a + t * (b - a);
+}
+function getDirection(d){
+  var res = getDirection.result
+  res.x = 0
+  res.y = 0
+  switch(d){
+    case "right":
+      res.x = 1
+      break
+    case "left":
+      res.x = -1
+      break
+    case "up":
+      res.y = -1
+      break
+    case "down":
+      res.y = 1
+      break
+  }
+  return res
+}
+getDirection.result = {x:0,y:0}
 
+//other stuff
 var c = document.querySelector("#c")
 var ctx = c.getContext("2d")
 function setSize(w,h){
@@ -45,7 +71,8 @@ var tint = {
 
 var blockData = [
   {
-    name:"air"
+    name:"air",
+    info: "Use this to set blocks to air."
   },
   {
     name:"redstoneWire",
@@ -75,28 +102,21 @@ var blockData = [
     },
     onupdate: function(x,y){
       var tags = world.getTags(x,y)
-      if(!tags){
-        tags = {
-          power:0,
-          right:0,
-          left:0,
-          up:0,
-          down:0
-        }
-        world.setTags(x,y,tags)
-      }
-      var right = world.getBlock(x+1,y)
-      var left = world.getBlock(x-1,y)
-      var down = world.getBlock(x,y+1)
-      var up = world.getBlock(x,y-1)
-      tags.right = connectable(right)
-      tags.left = connectable(left)
-      tags.up = connectable(up)
-      tags.down = connectable(down)
+
+      tags.right = connectable(x+1,y,"right")
+      tags.left = connectable(x-1,y,"left")
+      tags.up = connectable(x,y-1,"up")
+      tags.down = connectable(x,y+1,"down")
       world.setTags(x,y,tags)
     },
     onplace:function(x,y){
-      var tags = world.getTags(x,y)
+      var tags = {
+        power:0,
+        right:0,
+        left:0,
+        up:0,
+        down:0
+      }
       tags.power = world.getRedstoneWirePower(x,y)
       if(tags.power) world.spreadPower(x,y,tags.power)
       world.setTags(x,y,tags)
@@ -104,7 +124,8 @@ var blockData = [
     ondelete:function(x,y, prevTags){
       var tags = prevTags
       if(tags.power) world.unspreadPower(x,y,tags.power)
-    }
+    },
+    info: "Power can go through this block. This block can connect to other blocks."
   },
   {
     name:"redstoneBlock",
@@ -119,7 +140,8 @@ var blockData = [
     },
     ondelete: function(x,y){
       world.unspreadPower(x,y, 15)
-    }
+    },
+    info:"A power source."
   },
   {
     name:"stone",
@@ -127,7 +149,8 @@ var blockData = [
     draw: function(x,y){
       ctx.fillStyle = "#aaa"
       ctx.fillRect(x*size, y*size, size,size)
-    }
+    },
+    info:"A solid block."
   },
   {
     name:"redstoneLamp",
@@ -146,10 +169,120 @@ var blockData = [
         world.setTags(x,y,tags)
       }
       var power = world.getRedstonePower(x,y)
+      var prevOn = tags.on
       tags.on = power
-      world.setTags(x,y,tags)
+      if(prevOn !== tags.on) world.setTags(x,y,tags)
     },
-    detectTagChange: true
+    detectTagChange: true,
+    info:"A block that glows when it gets power."
+  },
+  {
+    name:"redstoneRepeater",
+    Name:"Redstone Repeater",
+    draw: function(x,y){
+      var tags = world.getTags(x,y)
+      ctx.fillStyle = "#aaa"
+      ctx.fillRect(x*size,y*size,size,size)
+      ctx.fillStyle = tags.on ? tint[15] : tint[0]
+      switch(tags.facing){
+        case "right":
+          ctx.fillRect(x*size+4,y*size+s2-2, size-14,4)
+          break
+        case "left":
+          ctx.fillRect(x*size+10,y*size+s2-2, size-14,4)
+          break
+        case "up":
+          ctx.fillRect(x*size+s2-2,y*size+10, 4,size-14)
+          break
+        case "down":
+          ctx.fillRect(x*size+s2-2,y*size+4, 4,size-14)
+      }
+      ctx.fillStyle = tags.on ? "#ff4" : tint[0]
+      var speed = tags.speed
+      var amount = (speed-1)/3
+      switch(tags.facing){
+        case "right":
+          ctx.fillRect(x*size+size-6,y*size+s2-2, 4,4)
+          ctx.fillRect(lerp(amount,x*size+size-14,x*size+4),y*size+s2-2, 4,4)
+          break
+        case "left":
+          ctx.fillRect(x*size+2,y*size+s2-2, 4,4)
+          ctx.fillRect(lerp(amount,x*size+10,x*size+size-8),y*size+s2-2, 4,4)
+          break
+        case "down":
+          ctx.fillRect(x*size+s2-2,y*size+size-6, 4,4)
+          ctx.fillRect(x*size+s2-2,lerp(amount,y*size+size-14,y*size+4), 4,4)
+          break
+        case "up":
+          ctx.fillRect(x*size+s2-2,y*size+2, 4,4)
+          ctx.fillRect(x*size+s2-2,lerp(amount,y*size+10,y*size+size-8), 4,4)
+          break
+      }
+    },
+    onplace: function(x,y){
+      world.setTags(x,y,{
+        on:false,
+        facing:"right",
+        speed: 1 //1 to 4
+      })
+    },
+    onupdate: function(x,y, sx,sy){
+      //detect if input got updated
+      var tags = world.getTags(x,y)
+      delete tags.power
+      var d = getDirection(tags.facing)
+
+      if(x + d.x === sx && y + d.y === sy && tags.on){
+        var block = world.getBlock(x+d.x,y+d.y)
+        var blockTags = world.getTags(x+d.x,y+d.y)
+        if(!blockTags) return
+        if("on" in blockTags) {
+          tags.power = 16
+          world.updateBlock(x+d.x,y+d.y,x,y)
+          delete tags.power
+        }
+        if(blockTags.power !== 15){
+          world.setPower(x+d.x,y+d.y,15)
+          world.spreadPower(x+d.x,y+d.y,14)
+        }
+      }
+      if(!(x - d.x === sx && y - d.y === sy) && !(sx === x && sy === y)) return
+
+      setTimeout(function(){
+        var inputTags = world.getTags(x-d.x,y-d.y)
+        var prevOn = tags.on
+        tags.on = (inputTags && inputTags.power && true) || false
+        var block = world.getBlock(x+d.x,y+d.y) //block in front
+        if(!block) return //power cannot go through air
+        var blockTags = world.getTags(x+d.x,y+d.y)
+        if((blockTags && blockTags.power ? true : false) !== tags.on){
+          if(tags.on){
+            world.setPower(x+d.x,y+d.y,15)
+            world.spreadPower(x+d.x,y+d.y,14)
+          }else{
+            world.unspreadPower(x+d.x,y+d.y,15,true)
+          }
+        }
+        if(blockTags && "on" in blockTags && blockTags.on !== tags.on){
+          if(tags.on){
+            tags.power = 16
+            world.updateBlock(x+d.x,y+d.y,x,y)
+            delete tags.power
+          }else{
+            world.updateBlock(x+d.x,y+d.y,x,y)
+          }
+        }
+      }, tags.speed * 50)
+    },
+    detectTagChange:true,
+    noSetPower:true,
+    ondelete: function(x,y, tags){
+      var d = getDirection(tags.facing)
+      if(tags.on && world.getBlock(x+d.x,y+d.y)){
+        world.unspreadPower(x+d.x,y+d.y,15,true)
+      }
+    },
+    info:"A block that delays signals going through it."
   }
 ]
 var blockIds = {}
@@ -160,10 +293,37 @@ blockData.forEach((block, i) => {
 })
 
 var connectables = [blockIds.redstoneWire, blockIds.redstoneBlock, blockIds.redstoneLamp]
-var connectable = id => connectables.includes(id)
+var connectable = function(x,y, d) {
+  var id = world.getBlock(x,y)
+  if(connectables.includes(id)) return true
+  if(id === blockIds.redstoneRepeater){
+    var tags = world.getTags(x,y)
+    var canIt = false
+    switch(tags.facing){
+      case "right":
+      case "left":
+        canIt = d === "left" || d === "right"
+        break
+      case "up":
+      case "down":
+        canIt = d === "up" || d === "down"
+    }
+    return canIt
+  }
+  return false
+}
 
 var selected = 0
 var blockPicker = document.querySelector("#blocks")
+var blockInfo = document.querySelector("#blockInfo")
+function setBlockInfo(id){
+  var block = blockData[id]
+  if(!block.info){
+    blockInfo.innerHTML = ""
+    return
+  }
+  blockInfo.innerHTML = "<h2>"+block.Name+"</h2>"+block.info
+}
 function unselect(){
   var div = document.querySelector("#blocks > div.selected")
   div.classList.remove("selected")
@@ -178,6 +338,7 @@ blockData.forEach((b, i) => {
     selected = id
     unselect()
     this.classList.add("selected")
+    setBlockInfo(id)
   }
   blockPicker.appendChild(div)
 })
@@ -210,18 +371,19 @@ class World{
 
     this.tags[i] = null
 
+    if(prev && blockData[prev].ondelete){
+      blockData[prev].ondelete(x,y, prevTags)
+    }
+
+    if(blockData[id].onplace){
+      blockData[id].onplace(x,y)
+    }
+
     this.updateBlock(x,y,   x,y)
     this.updateBlock(x+1,y, x,y)
     this.updateBlock(x-1,y, x,y)
     this.updateBlock(x,y+1, x,y)
     this.updateBlock(x,y-1, x,y)
-
-    if(prev && blockData[prev].ondelete){
-      blockData[prev].ondelete(x,y, prevTags)
-    }
-    if(blockData[id].onplace){
-      blockData[id].onplace(x,y)
-    }
   }
   getTags(x,y){
     var i = this.getIndex(x,y)
@@ -279,13 +441,13 @@ class World{
       this.setPower(bx,by, l)
     }
   }
-  unspreadPower(x,y, level){
+  unspreadPower(x,y, level, includeSource){
     var spread = this.getRedstoneConnectedTo(x,y,level)
     for(var n=0; n<level; n++){
       for(var i=0; i<spread.length; i+=3){
         var bx = spread[i]
         var by = spread[i+1]
-        if(bx === x && by === y) continue
+        if(!includeSource && bx === x && by === y) continue
         var l = this.getRedstoneWirePower(bx,by)
         this.setPower(bx,by, l)
       }
@@ -312,7 +474,9 @@ class World{
     return (tags && tags.power) || 0
   }
   setPower(x,y, level){
-    var tags = this.getTags(x,y)
+    var block = this.getBlock(x,y)
+    if(block && blockData[block].noSetPower) return
+    var tags = this.getTags(x,y) || {}
     tags.power = level
     this.setTags(x,y,tags)
   }
@@ -322,33 +486,6 @@ class World{
       blockData[block].onupdate(x,y, sourceX,sourceY)
     }
   }
-  /*trySpread(x, y, level, spread) {
-    if(y < 0) return
-    
-    var f
-    if (this.getPower(x, y) < level) {
-      if (!blockData[this.world.getBlock(x, y, z)].blocksLight) {
-        this.setPower(x, y, level)
-        spread.push(x, y)
-      }
-    }
-  }
-  spreadPowerAtBlocks(blocks, level) {
-    let spread = []
-    let x = 0, y = 0
-    for (let i = 0; i < blocks.length; i += 2) {
-      x = blocks[i]
-      y = blocks[i+1]
-      if(y < 0) continue
-      this.trySpread(x - 1, y, level, spread)
-      this.trySpread(x + 1, y, level, spread)
-      this.trySpread(x, y - 1, level, spread)
-      this.trySpread(x, y + 1, level, spread)
-    }
-    if (level > 1 && spread.length) {
-      this.spreadPowerAtBlocks(spread, level - 1, update, blockLight)
-    }
-  }*/
 }
 
 var world = new World()

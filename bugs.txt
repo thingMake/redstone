@@ -1,0 +1,3 @@
+redstone repeaters need to power other redstone repeaters in front of it
+
+redstone repeaters need to be rotateable and the speed needs to be changeable
