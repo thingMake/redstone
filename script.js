@@ -220,9 +220,10 @@ var blockData = [
       }
     },
     onplace: function(x,y){
+      var prevTags = world.getTags(x,y)
       world.setTags(x,y,{
         on:false,
-        facing:"right",
+        facing: (prevTags && prevTags.facing) || "right",
         speed: 1 //1 to 4
       })
     },
@@ -272,7 +273,7 @@ var blockData = [
             world.updateBlock(x+d.x,y+d.y,x,y)
           }
         }
-      }, tags.speed * 50)
+      }, tags.speed * 100)
     },
     detectTagChange:true,
     noSetPower:true,
@@ -282,7 +283,7 @@ var blockData = [
         world.unspreadPower(x+d.x,y+d.y,15,true)
       }
     },
-    info:"A block that delays signals going through it."
+    info:"A block that delays signals going through it. Click to rotate."
   }
 ]
 var blockIds = {}
@@ -362,14 +363,14 @@ class World{
     if(i < 0) return 0
     return this.blocks[i] || 0
   }
-  setBlock(x,y, id){
+  setBlock(x,y, id, tags){
     var i = this.getIndex(x,y)
     if(i < 0) return
     var prev = this.blocks[i]
     var prevTags = this.tags[i]
     this.blocks[i] = id
 
-    this.tags[i] = null
+    this.tags[i] = tags || null
 
     if(prev && blockData[prev].ondelete){
       blockData[prev].ondelete(x,y, prevTags)
@@ -494,7 +495,7 @@ var s2 = size / 2
 
 setSize(world.width * size, world.height * size)
 
-var mouseX = 0, mouseY = 0, blockX = 0, blockY = 0,mouseDown = false
+var mouseX = 0, mouseY = 0, blockX = 0, blockY = 0,mouseDown = false, mouseButton = 0
 
 function getMousePos(e) {
   var rect = c.getBoundingClientRect();
@@ -507,13 +508,37 @@ function getMousePos(e) {
 }
 
 function newWorldBlock(x,y){
-  world.setBlock(x,y, selected)
+  var prevBlock = world.getBlock(x,y)
+  var prevTags = world.getTags(x,y)
+  if(mouseButton === 2){
+    world.setBlock(x,y, 0)
+  }else if(prevTags && prevTags.facing && prevBlock === selected){
+    var facing = prevTags.facing
+    switch(facing){
+      case "right":
+        facing = "down"
+        break
+      case "down":
+        facing = "left"
+        break
+      case "left":
+        facing = "up"
+        break
+      case "up":
+        facing = "right"
+    }
+    prevTags.facing = facing
+    world.setBlock(x,y, selected, prevTags)
+  }else{
+    world.setBlock(x,y, selected)
+  }
 }
 c.onmousedown = function(e){
   mouseDown = true
   getMousePos(e)
   blockX = e.blockX
   blockY = e.blockY
+  mouseButton = e.button
   newWorldBlock(blockX, blockY)
 }
 c.onmouseup = function(e){
@@ -526,6 +551,10 @@ c.onmousemove = function(e){
     blockY = e.blockY
     newWorldBlock(e.blockX, e.blockY)
   }
+}
+
+c.oncontextmenu = function(e){
+  return false
 }
 
 function draw(){
