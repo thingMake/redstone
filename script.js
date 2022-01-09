@@ -72,7 +72,7 @@ var tint = {
 var blockData = [
   {
     name:"air",
-    info: "Use this to set blocks to air."
+    info: "Use this to set blocks to air. Right clicking also sets the block to air."
   },
   {
     name:"redstoneWire",
@@ -107,6 +107,13 @@ var blockData = [
       tags.left = connectable(x-1,y,"left")
       tags.up = connectable(x,y-1,"up")
       tags.down = connectable(x,y+1,"down")
+      if(tags.right + tags.left + tags.up + tags.down === 1){
+        //make it a line. it can't be half of a line
+        if(tags.right) tags.left = true
+        if(tags.left) tags.right = true
+        if(tags.up) tags.down = true
+        if(tags.down) tags.up = true
+      }
       world.setTags(x,y,tags)
     },
     onplace:function(x,y){
@@ -139,7 +146,7 @@ var blockData = [
       world.spreadPower(x,y, 15)
     },
     ondelete: function(x,y){
-      world.unspreadPower(x,y, 15)
+      world.unspreadPower(x,y, 16)
     },
     info:"A power source."
   },
